@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Did AI touch this?</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="app.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header class="bar">
+      <h1 class="brand">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2.2h8.4A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="15.5" cy="14" r="2.6" fill="var(--change)"/><circle cx="9.5" cy="14" r="2.6" fill="var(--read)"/></svg>
+        Did AI touch this?
+      </h1>
+      <form id="goto" class="goto" role="search">
+        <input id="goto-input" type="text" placeholder="Paste a file or folder path" aria-label="File or folder path" autocomplete="off" spellcheck="false" />
+        <button type="submit">Go</button>
+      </form>
+      <fieldset class="toggles">
+        <legend class="visually-hidden">Show</legend>
+        <label title="Reads and changes worked out from shell commands and scripts, rather than recorded by a file tool"><input type="checkbox" id="opt-inferred" checked /> Inferred</label>
+        <label title="Folders an agent listed or searched, and files whose existence it checked"><input type="checkbox" id="opt-searched" /> Searched</label>
+        <label title="Files and folders no agent touched"><input type="checkbox" id="opt-untouched" checked /> Untouched</label>
+      </fieldset>
+      <div class="status">
+        <span id="status-text" role="status"></span>
+        <button id="rescan" type="button" title="Read new transcripts and recount files on disk">Rescan</button>
+      </div>
+    </header>
+    <main class="layout">
+      <section class="tree-pane" aria-label="Folders and files">
+        <div class="cols tree-head" aria-hidden="true">
+          <span>Name</span>
+          <span class="num" title="Files read">Read</span>
+          <span class="num" title="Files created, edited, moved or deleted">Changed</span>
+          <span class="num col-search" title="Folders listed or searched, and files checked">Searched</span>
+          <span class="cov-head" title="Share of the files on disk now that were read and changed. Git-ignored files and dependency folders don't count.">Coverage</span>
+        </div>
+        <div id="tree" role="tree" aria-label="Folders and files" tabindex="0"></div>
+        <div id="loading" class="loading">
+          <p id="loading-text">Reading transcripts…</p>
+          <div class="meter"><div id="loading-bar"></div></div>
+        </div>
+      </section>
+      <aside id="detail" class="detail-pane" aria-label="Details" aria-live="polite">
+        <div class="empty">
+          <h2>Pick a file or folder</h2>
+          <p>See which Claude Code and Codex sessions read or changed it, and resume any of them.</p>
+        </div>
+      </aside>
+    </main>
+  </body>
+</html>
