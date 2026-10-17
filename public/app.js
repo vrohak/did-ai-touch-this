@@ -133,9 +133,9 @@ async function loadChildren(dir, { ensure, all } = {}) {
   return data;
 }
 
-/** Coverage only says something about folders on disk where files were read or changed. */
+/** Coverage only says something about folders on disk where files were read or changed; a whole drive is too big to count. */
 function hasCoverage(entry) {
-  return entry.dir && entry.onDisk && entry.counts.read + entry.counts.change > 0;
+  return entry.dir && entry.onDisk && !entry.path.endsWith('/') && entry.counts.read + entry.counts.change > 0;
 }
 
 const coverageQueue = [];
