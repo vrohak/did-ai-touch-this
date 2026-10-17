@@ -1,1 +1,14 @@
+# Dependencies (development only: the app has none at runtime)
 node_modules/
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local agent state
+.claude/settings.local.json
+.claude/worktrees/

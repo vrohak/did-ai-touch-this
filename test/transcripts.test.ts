@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 import { claudeTranscript, parseClaude } from '../src/claude.ts';
 import { parseCodex } from '../src/codex.ts';
@@ -19,9 +21,9 @@ function assistant(cwd: string, ...uses: { id: string; name: string; input: Reco
 }
 
 test('a Claude transcript belongs to the session its file or folder is named after', () => {
-  const projects = 'C:\\Users\\me\\.claude\\projects';
-  assert.deepEqual(claudeTranscript(`${projects}\\C--repo\\abc.jsonl`, projects), { sessionId: 'abc', subagent: false });
-  assert.deepEqual(claudeTranscript(`${projects}\\C--repo\\abc\\subagents\\agent-1.jsonl`, projects), { sessionId: 'abc', subagent: true });
+  const projects = path.join(os.homedir(), '.claude', 'projects');
+  assert.deepEqual(claudeTranscript(path.join(projects, 'C--repo', 'abc.jsonl'), projects), { sessionId: 'abc', subagent: false });
+  assert.deepEqual(claudeTranscript(path.join(projects, 'C--repo', 'abc', 'subagents', 'agent-1.jsonl'), projects), { sessionId: 'abc', subagent: true });
 });
 
 test('Claude file tools are exact, failed calls are dropped, and shell commands are inferred', () => {

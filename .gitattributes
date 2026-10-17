@@ -1,0 +1,3 @@
+# LF everywhere, so a checkout on Windows has the same bytes as anywhere else.
+* text=auto eol=lf
+*.png binary
