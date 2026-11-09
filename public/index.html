@@ -15,28 +15,30 @@
         Did AI touch this?
       </h1>
       <form id="goto" class="goto" role="search">
-        <input id="goto-input" type="text" placeholder="Paste a file or folder path" aria-label="File or folder path" autocomplete="off" spellcheck="false" />
+        <input id="goto-input" type="text" placeholder="Paste a path or a resume command" aria-label="File or folder path, or a session id" autocomplete="off" spellcheck="false" />
         <button type="submit">Go</button>
       </form>
       <fieldset class="toggles">
         <legend class="visually-hidden">Show</legend>
         <label title="Reads and changes worked out from shell commands and scripts, rather than recorded by a file tool"><input type="checkbox" id="opt-inferred" checked /> Inferred</label>
         <label title="Folders an agent listed or searched, and files whose existence it checked"><input type="checkbox" id="opt-searched" /> Searched</label>
-        <label title="Files and folders no agent touched"><input type="checkbox" id="opt-untouched" checked /> Untouched</label>
+        <label title="Files and folders no agent touched" data-scoped-title="Files and folders this session didn't touch"><input type="checkbox" id="opt-untouched" checked /> Untouched</label>
       </fieldset>
       <div class="status">
-        <span id="status-text" role="status"></span>
+        <span id="status-text"></span>
         <button id="rescan" type="button" title="Read new transcripts and recount files on disk">Rescan</button>
       </div>
     </header>
+    <section id="scope" class="scope" aria-labelledby="scope-title" hidden></section>
+    <div id="notice" class="notice" hidden></div>
     <main class="layout">
       <section class="tree-pane" aria-label="Folders and files">
         <div class="cols tree-head" aria-hidden="true">
-          <span>Name</span>
+          <span>Name <span class="scope-tag">this session</span></span>
           <span class="num" title="Files read">Read</span>
           <span class="num" title="Files created, edited, moved or deleted">Changed</span>
           <span class="num col-search" title="Folders listed or searched, and files checked">Searched</span>
-          <span class="cov-head" title="Share of the files on disk now that were read and changed. Git-ignored files and dependency folders don't count.">Coverage</span>
+          <span class="cov-head" title="Share of the files on disk now that were read and changed. Git-ignored files and dependency folders don't count." data-scoped-title="Share of the files on disk now that this session read and changed">Coverage</span>
         </div>
         <div id="tree" role="tree" aria-label="Folders and files" tabindex="0"></div>
         <div id="loading" class="loading">
@@ -44,12 +46,33 @@
           <div class="meter"><div id="loading-bar"></div></div>
         </div>
       </section>
-      <aside id="detail" class="detail-pane" aria-label="Details" aria-live="polite">
-        <div class="empty">
-          <h2>Pick a file or folder</h2>
-          <p>See which Claude Code and Codex sessions read or changed it, and resume any of them.</p>
+      <aside class="side-pane">
+        <div class="tabs" role="tablist" aria-label="Side panel">
+          <button type="button" role="tab" id="tab-sessions" aria-controls="sessions-panel" aria-selected="true">Sessions <span id="tab-count" class="tab-count"></span></button>
+          <button type="button" role="tab" id="tab-detail" aria-controls="detail" aria-selected="false" tabindex="-1"><span id="tab-name" class="tab-name">Details</span></button>
+        </div>
+        <div id="sessions-panel" class="sessions-panel" role="tabpanel" aria-labelledby="tab-sessions">
+          <div class="list-head">
+            <label class="search-box">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m10.4 10.4 3.6 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input id="session-search" type="search" placeholder="Search titles, projects or a session id" role="combobox" aria-label="Search sessions" aria-controls="session-list" aria-expanded="true" aria-autocomplete="list" autocomplete="off" spellcheck="false" />
+            </label>
+            <p id="list-summary" class="list-summary"></p>
+          </div>
+          <div id="list-scroll" class="list-scroll" tabindex="-1">
+            <div id="session-list" role="listbox" aria-label="Sessions"></div>
+            <div id="list-state" class="list-state"></div>
+            <div id="list-sentinel" class="sentinel" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div id="detail" class="detail-pane" role="tabpanel" aria-labelledby="tab-detail" hidden>
+          <div class="empty">
+            <h2>Pick a file or folder</h2>
+            <p>See which Claude Code and Codex sessions read or changed it, and resume any of them.</p>
+          </div>
         </div>
       </aside>
     </main>
+    <div id="announce" class="visually-hidden" role="status"></div>
   </body>
 </html>

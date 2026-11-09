@@ -6,12 +6,13 @@ See which files your coding agents read, changed or searched. **Did AI touch thi
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img alt="A project's folder tree with read and changed counts and coverage bars for each folder. Beside it, the two sessions that touched checkout.ts, one from Claude Code and one from Codex, each with a command that resumes it." src="docs/screenshot-light.png">
+  <img alt="A project's folder tree showing only what one Claude Code session touched, with read and changed counts and coverage bars for each folder, under a banner that names the session, when it ran and its totals. Beside it, the Sessions list: every Claude Code and Codex session, newest first and grouped by date, with the one in view highlighted." src="docs/screenshot-light.png">
 </picture>
 
 - **Counts per folder:** how many files under each folder were read, and how many were changed.
 - **Coverage:** what share of a folder's files the agents read and changed, so you can see which parts of a repo an agent has actually looked at.
 - **Did AI touch this?** Pick any file or folder to see every session that touched it, when and how, with the command that resumes the session.
+- **Start from a session:** pick a session, or paste its resume command, to see only what that session touched.
 - **Local, with no dependencies:** one Node.js process on your machine. Nothing leaves it.
 
 ## Quick start
@@ -41,7 +42,23 @@ Files get a dot for each kind of touch: filled when a file tool recorded it, a r
 - Untick **Untouched** to hide the files and folders no agent touched.
 - Paste a path into the box at the top to jump to it.
 
-The side panel lists the sessions that touched the selected file or folder, newest first. Each comes with a resume command to copy, such as `cd "/home/me/shop"; claude --resume <id>` (Claude Code finds a session from the folder it started in) or `codex resume <id>`.
+The side panel's second tab, named after the selected file or folder, lists the sessions that touched it, newest first. Each comes with a resume command to copy, such as `cd "/home/me/shop"; claude --resume <id>` (Claude Code finds a session from the folder it started in) or `codex resume <id>`.
+
+### Start from a session
+
+The side panel opens on **Sessions**: every session, newest first and grouped by date. Search it by title, project, worktree, agent or session id, or press `/` to jump to the search from anywhere.
+
+Pick a session, or click **Show only this session** on a session card, and the tree, its counts and its coverage show only that session. The details lead with what the session did to the selected file or folder, followed by the other sessions that touched it. A tinted banner names the session, when it ran and what it touched. The tree opens at the session's folder with the folders of the files it changed already open, and files it deleted show as **not on disk**. Leave with **✕ All sessions**, Esc or the browser's Back button.
+
+To go to a session from the terminal, paste its resume command, or just its id, into the box at the top, or open a link to it:
+
+```sh
+start "" "http://localhost:4477/?session=<id>"   # Windows: cmd or Git Bash; in PowerShell, Start-Process "<url>"
+open "http://localhost:4477/?session=<id>"       # macOS
+xdg-open "http://localhost:4477/?session=<id>"   # Linux
+```
+
+If the app hasn't read that session's transcript yet, it rescans once by itself.
 
 ## How it works
 
@@ -93,6 +110,7 @@ Node runs the TypeScript directly, so there's no build step, and the UI in `publ
 | `src/tree.ts` | The tree of touched paths and its counts. |
 | `src/disk.ts` | What's on disk, and which files count for coverage. |
 | `src/server.ts` | The HTTP API. |
+| `public/sessions.js` | The rules of browsing by session: what search matches, date groups, where a session opens and session links. |
 
 To teach the parser a new command, add it to the handler tables in `src/shell.ts`, with a test in `test/shell.test.ts`.
 

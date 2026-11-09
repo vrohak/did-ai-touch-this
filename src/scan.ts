@@ -8,6 +8,9 @@ import { parseCodex } from './codex.ts';
 import { TouchSet, type Agent, type Session, type SessionPart } from './model.ts';
 import type { PathEnv } from './paths.ts';
 
+/** The title of a session that has none of its own. */
+export const UNTITLED = '(untitled session)';
+
 export interface Sources {
   /** ~/.claude/projects, or the projects folder under CLAUDE_CONFIG_DIR. */
   claudeProjects: string;
@@ -129,7 +132,7 @@ export function mergeParts(parts: SessionPart[], threadNames: Map<string, string
   for (const m of merged.values()) {
     m.s.touches = m.touches.list();
     if (m.s.agent === 'codex') m.s.title = threadNames.get(m.s.id) ?? m.s.title;
-    if (!m.s.title) m.s.title = '(untitled session)';
+    if (!m.s.title) m.s.title = UNTITLED;
     if (m.s.touches.length) sessions.push(m.s);
   }
   return sessions.sort((a, b) => (b.end ?? '').localeCompare(a.end ?? ''));

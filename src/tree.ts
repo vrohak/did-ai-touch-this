@@ -40,9 +40,7 @@ export interface SessionActivity {
   /** How the session touched the path itself, or anything under it. */
   levels: Record<TouchKind, Level>;
   tools: Record<TouchKind, string[]>;
-  /** Paths under it with each kind of touch, in all and only from file tools. */
-  counts: Record<TouchKind, number>;
-  exactCounts: Record<TouchKind, number>;
+  counts: Counts;
   first: string;
   last: string;
 }
@@ -52,10 +50,16 @@ export class TouchTree {
   readonly root: TreeNode = newNode('', '');
   readonly sessions: Session[];
   private readonly env: PathEnv;
+  private readonly context: TouchTree | undefined;
 
-  constructor(sessions: Session[], env: PathEnv) {
+  /**
+   * `context` is a tree of more sessions, such as all of them. Its folders are folders here too,
+   * so a one-session tree settles reads into searches exactly as the merged tree does.
+   */
+  constructor(sessions: Session[], env: PathEnv, context?: TouchTree) {
     this.sessions = sessions;
     this.env = env;
+    this.context = context;
     sessions.forEach((s, i) => {
       for (const t of s.touches) {
         const node = this.ensure(t.path);
@@ -63,7 +67,12 @@ export class TouchTree {
         node.own[t.kind] = Math.max(node.own[t.kind], t.exact ? 2 : 1) as Level;
       }
     });
-    settle(this.root);
+    this.settle(this.root);
+  }
+
+  /** Whether a node is a folder: some touched path is under it, here or in the context tree. */
+  isFolder(node: TreeNode): boolean {
+    return node.children.size > 0 || (this.context?.find(node.path)?.children.size ?? 0) > 0;
   }
 
   find(path: string): TreeNode | undefined {
@@ -85,12 +94,12 @@ export class TouchTree {
     }
   }
 
-  /** Where the tree opens: the deepest folder holding nearly all read and changed paths. */
-  start(): string {
-    let node = this.root;
+  /** Where the tree opens: the deepest folder, from `from` down, holding nearly all read and changed paths. */
+  start(from: TreeNode = this.root): string {
+    let node = from;
     for (;;) {
       const total = node.counts.read + node.counts.change;
-      const next = [...node.children.values()].find((c) => c.counts.read + c.counts.change >= total * 0.9);
+      const next = [...node.children.values()].find((c) => this.isFolder(c) && c.counts.read + c.counts.change >= total * 0.9);
       if (!next || total === 0) break;
       node = next;
     }
@@ -100,7 +109,11 @@ export class TouchTree {
   /** The sessions that touched a path or anything under it, most recent first. */
   activity(node: TreeNode): SessionActivity[] {
     const bySession = new Map<number, SessionActivity>();
+    // A session can hit one path twice in one kind, as when it read and searched a folder, but
+    // counts are of paths, as in settle.
+    const here = new Map<SessionActivity, Record<TouchKind, Level>>();
     for (const n of this.nodesUnder(node)) {
+      here.clear();
       for (const h of n.hits) {
         let a = bySession.get(h.session);
         if (!a) {
@@ -108,19 +121,26 @@ export class TouchTree {
             session: this.sessions[h.session]!,
             levels: { read: 0, change: 0, search: 0 },
             tools: { read: [], change: [], search: [] },
-            counts: { read: 0, change: 0, search: 0 },
-            exactCounts: { read: 0, change: 0, search: 0 },
+            counts: emptyCounts(),
             first: h.first,
             last: h.last,
           };
           bySession.set(h.session, a);
         }
-        a.levels[h.kind] = Math.max(a.levels[h.kind], h.exact ? 2 : 1) as Level;
-        a.counts[h.kind]++;
-        if (h.exact) a.exactCounts[h.kind]++;
+        const level: Level = h.exact ? 2 : 1;
+        a.levels[h.kind] = Math.max(a.levels[h.kind], level) as Level;
+        let levels = here.get(a);
+        if (!levels) here.set(a, (levels = { read: 0, change: 0, search: 0 }));
+        levels[h.kind] = Math.max(levels[h.kind], level) as Level;
         for (const tool of h.tools) if (!a.tools[h.kind].includes(tool)) a.tools[h.kind].push(tool);
         if (h.first && h.first < a.first) a.first = h.first;
         if (h.last > a.last) a.last = h.last;
+      }
+      for (const [a, levels] of here) {
+        for (const kind of KINDS) {
+          if (levels[kind]) a.counts[kind]++;
+          if (levels[kind] === 2) a.counts[`${kind}Exact`]++;
+        }
       }
     }
     return [...bySession.values()].sort((a, b) => b.last.localeCompare(a.last));
@@ -139,6 +159,24 @@ export class TouchTree {
     }
     return node;
   }
+
+  /** Counts each node's subtree; a folder can't be read, so a "read" of one is a search. */
+  private settle(node: TreeNode): void {
+    for (const child of node.children.values()) this.settle(child);
+    if (node.own.read && this.isFolder(node)) {
+      node.own.search = Math.max(node.own.search, node.own.read) as Level;
+      node.own.read = 0;
+      for (const h of node.hits) if (h.kind === 'read') h.kind = 'search';
+    }
+    const c = node.counts;
+    for (const kind of KINDS) {
+      if (node.own[kind]) c[kind]++;
+      if (node.own[kind] === 2) c[`${kind}Exact`]++;
+    }
+    for (const child of node.children.values()) {
+      for (const key of Object.keys(c) as (keyof Counts)[]) c[key] += child.counts[key];
+    }
+  }
 }
 
 function newNode(name: string, path: string): TreeNode {
@@ -148,24 +186,10 @@ function newNode(name: string, path: string): TreeNode {
     children: new Map(),
     own: { read: 0, change: 0, search: 0 },
     hits: [],
-    counts: { read: 0, readExact: 0, change: 0, changeExact: 0, search: 0, searchExact: 0 },
+    counts: emptyCounts(),
   };
 }
 
-/** Counts each node's subtree; a folder can't be read, so a "read" of one is a search. */
-function settle(node: TreeNode): void {
-  for (const child of node.children.values()) settle(child);
-  if (node.children.size && node.own.read) {
-    node.own.search = Math.max(node.own.search, node.own.read) as Level;
-    node.own.read = 0;
-    for (const h of node.hits) if (h.kind === 'read') h.kind = 'search';
-  }
-  const c = node.counts;
-  for (const kind of KINDS) {
-    if (node.own[kind]) c[kind]++;
-    if (node.own[kind] === 2) c[`${kind}Exact`]++;
-  }
-  for (const child of node.children.values()) {
-    for (const key of Object.keys(c) as (keyof Counts)[]) c[key] += child.counts[key];
-  }
+export function emptyCounts(): Counts {
+  return { read: 0, readExact: 0, change: 0, changeExact: 0, search: 0, searchExact: 0 };
 }

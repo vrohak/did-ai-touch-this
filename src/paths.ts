@@ -88,10 +88,18 @@ function normalize(p: string, windows: boolean): string {
   return root + out.join('/');
 }
 
+/** A Claude Code worktree in a path, `/.claude/worktrees/<name>`, with its name. */
+const WORKTREE = /\/\.claude\/worktrees\/([^/]+)(?=\/|$)/gi;
+
 /** Maps `<repo>/.claude/worktrees/<name>/x` to `<repo>/x`, so a repo's worktrees count as the repo. */
 function foldWorktrees(p: string): string {
-  const folded = p.replace(/\/\.claude\/worktrees\/[^/]+(?=\/|$)/gi, '');
+  const folded = p.replace(WORKTREE, '');
   return folded.includes('/') ? folded : `${folded}/`;
+}
+
+/** The name of the Claude Code worktree a path is in, which `resolvePath` folds away. */
+export function worktreeName(p: string): string | null {
+  return [...p.replace(/\\/g, '/').matchAll(WORKTREE)].at(-1)?.[1] ?? null;
 }
 
 /** Splits a canonical path into its root (`C:` or `/`) and names. */
@@ -118,6 +126,12 @@ export function parentPath(p: string): string | null {
 export function baseName(p: string): string {
   const parts = splitPath(p);
   return parts[parts.length - 1]!;
+}
+
+/** Whether `p` is `folder` itself or under it; '' holds every path. */
+export function isWithin(p: string, folder: string, env: PathEnv): boolean {
+  const [pk, fk] = [pathKey(p, env), pathKey(folder, env)];
+  return fk === '' || pk === fk || pk.startsWith(fk.endsWith('/') ? fk : `${fk}/`);
 }
 
 /** The key two spellings of one file share. */

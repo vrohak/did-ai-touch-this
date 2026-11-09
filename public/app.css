@@ -13,11 +13,16 @@
   --read: #2563eb;
   --read-soft: #dbe7fd;
   --change: #c76a05;
+  /* Darker for counts and words, which need more contrast than dots and bars. */
+  --change-text: #a35200;
   --change-soft: #fcebd3;
   --search: #7c4ddb;
   --search-soft: #ece4fb;
   --claude: #b8562f;
   --codex: #1f6f5c;
+  /* How strongly an agent's colour tints a surface that shows one session. */
+  --tint: 8%;
+  --match: #fff0a8;
   --row: 28px;
   --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
 }
@@ -37,12 +42,23 @@
     --read: #6ea2ff;
     --read-soft: #1d2d4a;
     --change: #f0a33c;
+    --change-text: #f0a33c;
     --change-soft: #3a2a14;
     --search: #b394f5;
     --search-soft: #2d2445;
     --claude: #e08a63;
     --codex: #4fbf9f;
+    --tint: 14%;
+    --match: #4d4212;
   }
+}
+
+[data-agent='claude'] {
+  --agent: var(--claude);
+}
+
+[data-agent='codex'] {
+  --agent: var(--codex);
 }
 
 * {
@@ -76,6 +92,15 @@ button {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.untitled {
+  color: var(--muted);
+  font-style: italic;
 }
 
 .visually-hidden {
@@ -135,7 +160,11 @@ button {
 
 .goto button,
 .status button,
-.copy {
+.copy,
+.scope-actions button,
+.notice button,
+.list-state button,
+.more {
   padding: 6px 12px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -148,7 +177,11 @@ button {
 
 .goto button:hover,
 .status button:hover,
-.copy:hover {
+.copy:hover,
+.scope-actions button:hover,
+.notice button:hover,
+.list-state button:hover,
+.more:hover {
   background: var(--hover);
 }
 
@@ -178,7 +211,7 @@ button {
   font-size: 13px;
 }
 
-.status button:disabled {
+.status button[aria-disabled='true'] {
   opacity: 0.6;
   cursor: progress;
 }
@@ -200,10 +233,20 @@ button {
   position: relative;
 }
 
-.detail-pane {
-  overflow: auto;
+/* The side panel: its tabs stay put and only the active panel scrolls. */
+.side-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   background: var(--surface);
   border-left: 1px solid var(--border);
+}
+
+.detail-pane {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   padding: 18px 20px 28px;
 }
 
@@ -212,10 +255,387 @@ button {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
   }
-  .detail-pane {
+  .side-pane {
     border-left: 0;
     border-top: 1px solid var(--border);
   }
+}
+
+/* One session in view: an agent-colour tint and a 4px rule in that colour, wherever it shows. */
+.scope,
+body[data-agent] .tree-head,
+.this-session,
+.srow[aria-selected='true'] {
+  background: color-mix(in srgb, var(--agent) var(--tint), var(--surface));
+}
+
+.scope,
+.this-session,
+.srow[aria-selected='true'] {
+  box-shadow: inset 4px 0 0 var(--agent);
+}
+
+mark {
+  background: var(--match);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Scope banner */
+
+.scope {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'head actions' 'meta meta';
+  align-items: center;
+  gap: 2px 16px;
+  padding: 8px 16px 9px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--agent) 35%, var(--border));
+}
+
+.scope h2 {
+  grid-area: head;
+  /* As wide as its words, so its focus ring wraps them rather than the empty column after them. */
+  justify-self: start;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  border-radius: 4px;
+  outline-offset: 3px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.eyebrow {
+  flex: none;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.scope-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 8px;
+}
+
+.scope-actions button {
+  padding: 4px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.scope-close {
+  font-weight: 600;
+}
+
+.scope-meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px 8px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  box-shadow: inset 4px 0 0 var(--faint);
+  font-size: 13px;
+}
+
+.notice p {
+  flex: 1;
+  margin: 0;
+}
+
+.notice button {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 860px) {
+  .scope {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'head' 'meta' 'actions';
+  }
+  .scope-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+  }
+  .scope-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* Words a narrow screen leaves off a button; the accessible name keeps them. */
+@media (max-width: 600px) {
+  .long {
+    display: none;
+  }
+}
+
+/* Side panel tabs */
+
+.tabs {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs [role='tab'] {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: -1px;
+  padding: 10px 8px 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tabs [role='tab']:hover {
+  color: var(--text);
+}
+
+.tabs [role='tab'][aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--focus);
+}
+
+#tab-sessions {
+  flex: none;
+}
+
+.tab-count {
+  color: var(--muted);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sessions list */
+
+.sessions-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.list-head {
+  flex: none;
+  padding: 12px 16px 6px;
+}
+
+.search-box {
+  position: relative;
+  display: block;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  translate: 0 -50%;
+  color: var(--faint);
+  pointer-events: none;
+}
+
+#session-search {
+  width: 100%;
+  padding: 6px 10px 6px 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 13px;
+}
+
+#session-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.5 3.5l7 7m0-7l-7 7' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.5 3.5l7 7m0-7l-7 7' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  cursor: pointer;
+}
+
+.list-summary {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 16px;
+}
+
+.group-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 -8px;
+  padding: 10px 16px 4px;
+  background: var(--surface);
+}
+
+.group-count {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.srow {
+  position: relative;
+  display: block;
+  height: 48px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: inherit;
+  text-decoration: none;
+  /* Below the sticky group header when the highlight scrolls up to it. */
+  scroll-margin-top: 34px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+}
+
+.s-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 10px;
+  height: 100%;
+}
+
+.srow:hover {
+  background: var(--hover);
+}
+
+.srow[aria-selected='true']:hover {
+  background: color-mix(in srgb, var(--agent) calc(var(--tint) * 1.6), var(--surface));
+}
+
+.sessions-panel:has(#session-search:focus) .srow.active {
+  background: var(--hover);
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* The highlight on the session in scope keeps its tint, and its rule shows inside the outline. */
+.sessions-panel:has(#session-search:focus) .srow.active[aria-selected='true'] {
+  background: color-mix(in srgb, var(--agent) calc(var(--tint) * 1.6), var(--surface));
+  box-shadow: inset 6px 0 0 var(--agent);
+}
+
+.s-title,
+.s-where {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.s-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.s-time,
+.s-totals {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.s-where {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.s-where .place {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-state {
+  padding: 16px 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.list-state h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.list-state p {
+  margin: 0 0 10px;
+}
+
+.list-state button,
+.more {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.sentinel {
+  height: 1px;
 }
 
 /* Tree */
@@ -248,6 +668,19 @@ button {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.scope-tag {
+  display: none;
+  margin-left: 4px;
+  color: var(--muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+body[data-agent] .scope-tag {
+  display: inline;
 }
 
 .num {
@@ -317,7 +750,11 @@ button {
   transition: transform 0.12s;
 }
 
-.twisty:hover {
+.dir .twisty {
+  cursor: pointer;
+}
+
+.dir .twisty:hover {
   background: var(--surface-2);
 }
 
@@ -368,7 +805,7 @@ button {
 }
 
 .change-count {
-  color: var(--change);
+  color: var(--change-text);
 }
 
 .search-count {
@@ -508,10 +945,6 @@ button {
   background: var(--bg);
 }
 
-.loading[hidden] {
-  display: none;
-}
-
 .loading p {
   margin: 0;
 }
@@ -597,7 +1030,7 @@ button {
 
 .chip.change {
   background: var(--change-soft);
-  color: var(--change);
+  color: var(--change-text);
 }
 
 .chip.search {
@@ -637,11 +1070,49 @@ button {
   color: var(--faint);
 }
 
-.detail-pane h3 {
-  margin: 18px 0 8px;
+.detail-pane h3:not(.eyebrow),
+.group-head {
   font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.detail-pane h3:not(.eyebrow) {
+  margin: 18px 0 8px;
+}
+
+/* What the session in scope did here, bleeding to the panel's edges like the banner. */
+.this-session {
+  margin: 0 -20px 18px;
+  padding: 12px 20px 14px 24px;
+}
+
+.this-session .eyebrow {
+  margin: 0 0 8px;
+}
+
+.this-session .facts {
+  margin-bottom: 10px;
+}
+
+.this-session .did {
+  margin-top: 0;
+}
+
+.this-session .coverage-box {
+  margin: 0;
+  background: var(--surface);
+}
+
+.this-session .coverage-box .bar-track {
+  background: var(--surface-2);
+}
+
+.this-session p {
+  margin: 8px 0 0;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -693,10 +1164,38 @@ button {
   }
 }
 
+/* One line, so "Show only this session" sits in the same place on every card. */
 .session-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
   margin-top: 3px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.session-meta > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope-link {
+  flex: none;
+  margin-left: auto;
+  color: var(--focus);
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.scope-link:hover {
+  text-decoration: underline;
+}
+
+.more {
+  margin-top: 10px;
 }
 
 .did {
@@ -760,5 +1259,48 @@ button {
 }
 
 .error {
-  color: var(--change);
+  color: var(--change-text);
+}
+
+/* Forced colours erase what colour alone draws: the scope's tint, dots, bars, selections and matches.
+   Last in the file, so these win over the rules they replace. */
+@media (forced-colors: active) {
+  .scope,
+  .this-session,
+  .srow[aria-selected='true'] {
+    border-left: 4px solid CanvasText;
+  }
+  mark {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+  .tabs [role='tab'] {
+    border-bottom-color: Canvas;
+  }
+  .tabs [role='tab'][aria-selected='true'] {
+    border-bottom-color: Highlight;
+  }
+  /* In a scope, the dots are all that says what the session touched. */
+  .mark,
+  .bar-fill {
+    forced-color-adjust: none;
+  }
+  .mark.read,
+  .mark.change,
+  .mark.search,
+  .bar-fill.read,
+  .bar-fill.change {
+    background: CanvasText;
+  }
+  .mark.read.inferred,
+  .mark.change.inferred,
+  .mark.search.inferred {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .row[aria-selected='true'] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }
